@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  role         String   @default("ADMIN")
+  createdAt    DateTime @default(now())
+}
+
+model Product {
+  id                String      @id @default(cuid())
+  name              String
+  sku               String      @unique
+  category          String
+  description       String?
+  price             Decimal     @db.Decimal(10, 2)
+  stock             Int         @default(0)
+  lowStockThreshold Int         @default(5)
+  isActive          Boolean     @default(true)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  orderItems        OrderItem[]
+  stockLogs         StockLog[]
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  invoiceNumber String      @unique
+  customerName  String?
+  totalAmount   Decimal     @db.Decimal(10, 2)
+  status        OrderStatus @default(COMPLETED)
+  createdAt     DateTime    @default(now())
+  
+  items         OrderItem[]
+}
+
+enum OrderStatus {
+  COMPLETED
+  CANCELLED
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  productId   String
+  quantity    Int
+  priceAtSale Decimal @db.Decimal(10, 2)
+  subtotal    Decimal @db.Decimal(10, 2)
+
+  order       Order   @relation(fields: [orderId], references: [id])
+  product     Product @relation(fields: [productId], references: [id])
+}
+
+model StockLog {
+  id             String   @id @default(cuid())
+  productId      String
+  changeType     String
+  quantityChange Int
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  product        Product  @relation(fields: [productId], references: [id])
+}
