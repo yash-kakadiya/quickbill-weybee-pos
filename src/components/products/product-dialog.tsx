@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { productSchema, ProductInput } from '@/lib/validations/product';
 import { createProduct, updateProduct } from '@/actions/product.actions';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,7 @@ interface ProductDialogProps {
 export function ProductDialog({ open, onOpenChange, productToEdit }: ProductDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<ProductInput>({
+  const form = useForm<z.input<typeof productSchema>, any, ProductInput>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: '',

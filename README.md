@@ -29,48 +29,48 @@ A production-grade, full-stack Point of Sale (POS) system designed for retail sh
 - A Gemini API Key
 
 ### 1. Clone & Install
-\`\`\`bash
+```bash
 npm install
-\`\`\`
+```
 
 ### 2. Environment Variables
 Create a `.env` file in the root directory:
-\`\`\`env
+```env
 DATABASE_URL="postgresql://user:password@host/db?sslmode=require"
 JWT_SECRET="your-super-secret-jwt-key"
 GEMINI_API_KEY="your-google-gemini-api-key"
-\`\`\`
+```
 
 ### 3. Database Setup
 Push the Prisma schema to your database and generate the client:
-\`\`\`bash
+```bash
 npx prisma db push
 npx prisma generate
-\`\`\`
+```
 
 ### 4. Seed Admin User
 Run the setup script to create the initial admin user:
-\`\`\`bash
+```bash
 node setup.js
-\`\`\`
+```
 *Default Credentials: `admin` / `admin123`*
 
 ### 5. Run the Application
-\`\`\`bash
+```bash
 npm run dev
-\`\`\`
+```
 Access the app at `http://localhost:3000`.
 
 ## 🏗 Architecture Decisions
 
 1. **Atomic Inventory Control:**
    Instead of calculating stock logic in Node.js (which risks race conditions), we use Prisma's atomic operations:
-   \`\`\`typescript
+   ```typescript
    await tx.product.update({
      where: { id: productId, stock: { gte: requestedQuantity } },
      data: { stock: { decrement: requestedQuantity } }
    })
-   \`\`\`
+   ```
    This passes the lock responsibility directly to PostgreSQL.
 
 2. **Server Actions for Mutations:**

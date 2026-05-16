@@ -37,7 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
         <div className="p-4 border-t">
-          <form action={logoutAction}>
+          <form action={async () => { await logoutAction(); }}>
             <Button variant="ghost" type="submit" className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10">
               <LogOut className="mr-2 h-4 w-4" />
               Logout
