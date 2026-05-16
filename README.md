@@ -51,7 +51,7 @@ A production-grade, full-stack Point of Sale (POS) and inventory management syst
 
 ### 1. Clone & Install
 ```bash
-git clone <repository-url>
+git clone https://github.com/Yash-Kakadiya/quickbill-weybee-pos.git
 cd quickbill-weybee-pos
 npm install
 ```
