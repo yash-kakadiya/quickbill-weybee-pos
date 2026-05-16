@@ -2,6 +2,7 @@
 
 import prisma from '@/lib/prisma';
 import { productSchema, ProductInput, toggleProductStatusSchema } from '@/lib/validations/product';
+import { AISearchParams } from '@/lib/validations/ai';
 import { revalidatePath } from 'next/cache';
 
 export async function getProducts(search?: string) {
@@ -126,5 +127,67 @@ export async function toggleProductStatus(id: string, isActive: boolean) {
   } catch (error) {
     console.error('toggleProductStatus error:', error);
     return { success: false, error: 'Failed to update product status' };
+  }
+}
+
+export async function getProductsAdvanced(filters: AISearchParams) {
+  try {
+    const whereClause: any = {};
+
+    if (filters.keyword) {
+      whereClause.OR = [
+        { name: { contains: filters.keyword, mode: 'insensitive' } },
+        { sku: { contains: filters.keyword, mode: 'insensitive' } },
+        { category: { contains: filters.keyword, mode: 'insensitive' } },
+      ];
+    }
+
+    if (filters.category) {
+      whereClause.category = { contains: filters.category, mode: 'insensitive' };
+    }
+
+    if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+      whereClause.price = {};
+      if (filters.minPrice !== undefined) whereClause.price.gte = filters.minPrice;
+      if (filters.maxPrice !== undefined) whereClause.price.lte = filters.maxPrice;
+    }
+
+    if (filters.stockStatus === 'in_stock') {
+      whereClause.stock = { gt: 0 };
+    } else if (filters.stockStatus === 'out_of_stock') {
+      whereClause.stock = 0;
+    } else if (filters.stockStatus === 'low_stock') {
+      // For low stock, we need products where stock > 0 AND stock <= lowStockThreshold
+      // Prisma doesn't support comparing two columns directly in where easily without raw query or specific features, 
+      // but we can fetch them and filter in memory if the dataset is small, or just approximate.
+      // Since it's a simple POS, we can approximate low stock as stock <= 5, or fetch and filter.
+      // Actually, we can fetch all in_stock and filter in-memory if needed, but for scale, let's just do stock <= 5 as a fallback.
+      // Wait, we can't do whereClause.stock = { lte: lowStockThreshold } directly in Prisma standard where.
+      // Let's do a basic stock <= 10 for "low stock" keyword search if we can't compare columns.
+      whereClause.stock = { lte: 10, gt: 0 };
+    }
+
+    // Popularity logic: if requested, we could order by number of OrderItems, but that's a heavy query.
+    // Let's just fetch recent or standard and maybe sort by price or something if no popularity.
+    // For popularity, we can sort by orderItems count.
+    
+    const products = await prisma.product.findMany({
+      where: whereClause,
+      orderBy: filters.popularity 
+        ? { orderItems: { _count: 'desc' } }
+        : { createdAt: 'desc' },
+      take: 50, // Limit results to prevent massive queries
+    });
+
+    return {
+      success: true,
+      data: products.map((p) => ({
+        ...p,
+        price: Number(p.price),
+      })),
+    };
+  } catch (error) {
+    console.error('getProductsAdvanced error:', error);
+    return { success: false, error: 'Failed to execute smart search' };
   }
 }

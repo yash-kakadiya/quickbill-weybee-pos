@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getProducts, toggleProductStatus } from '@/actions/product.actions';
+import { smartSearchProducts } from '@/actions/ai.actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,20 +15,29 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { ProductDialog } from '@/components/products/product-dialog';
-import { Plus, Search, Edit2, Power, PowerOff } from 'lucide-react';
+import { Plus, Search, Edit2, Power, PowerOff, Sparkles, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSmartSearching, setIsSmartSearching] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<any>(null);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
 
   useEffect(() => {
-    fetchProducts();
-  }, [search]);
+    // Only auto-fetch if we are not in the middle of a smart search context
+    // Actually, we can just fetch normal products if search changes and activeFilters is null
+    if (!activeFilters) {
+      const delayDebounce = setTimeout(() => {
+        fetchProducts();
+      }, 300);
+      return () => clearTimeout(delayDebounce);
+    }
+  }, [search, activeFilters]);
 
   async function fetchProducts() {
     setIsLoading(true);
@@ -38,6 +48,33 @@ export default function ProductsPage() {
       toast.error('Failed to load products');
     }
     setIsLoading(false);
+  }
+
+  async function handleSmartSearch() {
+    if (!search.trim()) {
+      toast.error('Please enter a search term for AI');
+      return;
+    }
+    setIsSmartSearching(true);
+    setIsLoading(true);
+    
+    const res = await smartSearchProducts(search);
+    if (res.success && res.data) {
+      setProducts(res.data);
+      setActiveFilters(res.filtersUsed);
+      toast.success('Smart Search applied!');
+    } else {
+      toast.error(res.error || 'Smart Search failed');
+    }
+    
+    setIsSmartSearching(false);
+    setIsLoading(false);
+  }
+
+  function clearSmartSearch() {
+    setActiveFilters(null);
+    setSearch('');
+    // useEffect will auto-fetch since activeFilters is null and search changed
   }
 
   async function handleToggleStatus(product: any) {
@@ -69,15 +106,46 @@ export default function ProductsPage() {
         </Button>
       </div>
 
-      <div className="flex items-center relative max-w-sm">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search products..."
-          className="pl-8"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 max-w-md">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search products natively or use Smart Search..."
+              className="pl-8"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                if (activeFilters) setActiveFilters(null); // break smart search on manual edit
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSmartSearch();
+              }}
+            />
+          </div>
+          <Button onClick={handleSmartSearch} disabled={isSmartSearching || isLoading} variant="secondary">
+            {isSmartSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-blue-500" />}
+            Smart Search
+          </Button>
+        </div>
+        
+        {activeFilters && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-muted-foreground">AI Filters applied:</span>
+            {Object.entries(activeFilters).map(([key, val]) => {
+              if (val === undefined || val === null || val === 'any' || val === '') return null;
+              return (
+                <Badge key={key} variant="outline" className="bg-primary/5">
+                  {key}: {val.toString()}
+                </Badge>
+              );
+            })}
+            <Button variant="ghost" size="sm" onClick={clearSmartSearch} className="h-6 px-2 text-xs">
+              <X className="h-3 w-3 mr-1" /> Clear
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="border rounded-md">

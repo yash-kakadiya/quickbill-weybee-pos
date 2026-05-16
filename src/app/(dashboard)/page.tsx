@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { getDashboardStats } from '@/actions/dashboard.actions';
-import { generateDailySummary } from '@/actions/ai.actions';
+import { generateDailySummary, generateRestockInsights } from '@/actions/ai.actions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Package, ShoppingCart, IndianRupee, Sparkles, Loader2 } from 'lucide-react';
+import { TrendingUp, Package, ShoppingCart, IndianRupee, Sparkles, Loader2, BrainCircuit } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   BarChart,
@@ -23,6 +23,9 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+
+  const [isGeneratingRestock, setIsGeneratingRestock] = useState(false);
+  const [restockInsights, setRestockInsights] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadStats() {
@@ -47,6 +50,18 @@ export default function DashboardPage() {
       toast.error(res.error);
     }
     setIsGeneratingAI(false);
+  }
+
+  async function handleGenerateRestock() {
+    setIsGeneratingRestock(true);
+    const res = await generateRestockInsights();
+    if (res.success) {
+      setRestockInsights(res.insights!);
+      toast.success('Restock Insights generated!');
+    } else {
+      toast.error(res.error);
+    }
+    setIsGeneratingRestock(false);
   }
 
   if (isLoading) {
@@ -142,24 +157,48 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="col-span-3 flex flex-col">
-          <CardHeader>
-            <CardTitle>Needs Restock</CardTitle>
-            <CardDescription>Products running below threshold.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col gap-4">
-             {stats.lowStockProducts.length === 0 ? (
-               <p className="text-sm text-muted-foreground">All inventory levels look good!</p>
-             ) : (
-               stats.lowStockProducts.map((p: any) => (
-                 <div key={p.id} className="flex justify-between items-center border-b pb-2 last:border-0">
-                    <span className="font-medium text-sm">{p.name}</span>
-                    <Badge variant="destructive">{p.stock} left</Badge>
-                 </div>
-               ))
-             )}
-          </CardContent>
-        </Card>
+        <div className="col-span-3 flex flex-col gap-4">
+          <Card className="flex-1 flex flex-col">
+            <CardHeader>
+              <CardTitle>Needs Restock</CardTitle>
+              <CardDescription>Products running below threshold.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col gap-4">
+               {stats.lowStockProducts.length === 0 ? (
+                 <p className="text-sm text-muted-foreground">All inventory levels look good!</p>
+               ) : (
+                 stats.lowStockProducts.map((p: any) => (
+                   <div key={p.id} className="flex justify-between items-center border-b pb-2 last:border-0">
+                      <span className="font-medium text-sm">{p.name}</span>
+                      <Badge variant="destructive">{p.stock} left</Badge>
+                   </div>
+                 ))
+               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Restock Intelligence</CardTitle>
+              </div>
+              <Button onClick={handleGenerateRestock} disabled={isGeneratingRestock} variant="secondary" size="sm">
+                {isGeneratingRestock ? <Loader2 className="h-4 w-4 animate-spin" /> : <BrainCircuit className="h-4 w-4 text-purple-500" />}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {restockInsights ? (
+                <div className="text-sm leading-relaxed text-muted-foreground">
+                  {restockInsights}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground italic">
+                  Click to analyze inventory health...
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
