@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -99,15 +100,22 @@ export default function OrdersPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleCancel(order.id)}
-                      disabled={order.status === 'CANCELLED'}
-                      className={order.status === 'COMPLETED' ? 'text-destructive hover:text-destructive' : ''}
-                    >
-                      {order.status === 'CANCELLED' ? 'Cancelled' : 'Cancel Order'}
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Link href={`/orders/${order.id}/invoice`}>
+                        <Button variant="outline" size="sm">
+                          Invoice
+                        </Button>
+                      </Link>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleCancel(order.id)}
+                        disabled={order.status === 'CANCELLED'}
+                        className={order.status === 'COMPLETED' ? 'text-destructive hover:text-destructive' : ''}
+                      >
+                        {order.status === 'CANCELLED' ? 'Cancelled' : 'Cancel'}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
