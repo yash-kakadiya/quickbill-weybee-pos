@@ -6,15 +6,19 @@ import { generateDailySummary, generateRestockInsights } from '@/actions/ai.acti
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Package, ShoppingCart, IndianRupee, Sparkles, Loader2, BrainCircuit, Activity } from 'lucide-react';
+import { TrendingUp, Package, ShoppingCart, IndianRupee, Sparkles, Loader2, BrainCircuit, Activity, BarChart3, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { MetricCard } from '@/components/ui/dashboard/metric-card';
-import { RevenueChart } from '@/components/ui/charts/revenue-chart';
+import { SalesOrdersChart } from '@/components/ui/charts/sales-orders-chart';
 import { CategoryDistribution } from '@/components/ui/charts/category-distribution';
+import { TopProductsChart } from '@/components/ui/charts/top-products-chart';
+import { InventoryHealth } from '@/components/ui/charts/inventory-health';
 
 export default function DashboardPage() {
+  const [days, setDays] = useState(7);
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
 
@@ -23,7 +27,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadStats() {
-      const res = await getDashboardStats();
+      setIsLoading(true);
+      const res = await getDashboardStats(days);
       if (res.success) {
         setStats(res.data);
       } else {
@@ -32,7 +37,7 @@ export default function DashboardPage() {
       setIsLoading(false);
     }
     loadStats();
-  }, []);
+  }, [days]);
 
   async function handleGenerateSummary() {
     setIsGeneratingAI(true);
@@ -58,200 +63,216 @@ export default function DashboardPage() {
     setIsGeneratingRestock(false);
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex h-[60vh] flex-col items-center justify-center space-y-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground animate-pulse">Loading dashboard metrics...</p>
-      </div>
-    );
-  }
-
-  if (!stats) return null;
-
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Business Overview</h1>
-        <p className="text-muted-foreground">Monitor your store's performance and AI insights.</p>
+    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+      {/* Header & Date Range */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Business Overview</h1>
+          <p className="text-muted-foreground">Monitor your store's performance and AI insights.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          <select
+            value={days}
+            onChange={(e) => setDays(Number(e.target.value))}
+            className="flex h-9 w-[140px] items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <option value={7}>Last 7 Days</option>
+            <option value={30}>Last 30 Days</option>
+            <option value={90}>Last 90 Days</option>
+          </select>
+        </div>
       </div>
 
-      {/* 1. Top KPIs */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard 
-          title="Today's Revenue" 
-          value={stats.todayRevenue} 
-          prefix="₹" 
-          icon={IndianRupee} 
-          trend="vs lifetime avg" 
-          trendUp={true} 
-        />
-        <MetricCard 
-          title="Today's Orders" 
-          value={stats.todayOrders} 
-          icon={ShoppingCart} 
-          trend={`${stats.totalOrders} total lifetime`} 
-          trendUp={true} 
-        />
-        <MetricCard 
-          title="Active Products" 
-          value={stats.activeProducts} 
-          icon={Package} 
-        />
-        <MetricCard 
-          title="Low Stock Alerts" 
-          value={stats.lowStockProducts.length} 
-          icon={TrendingUp} 
-          trend="needs attention" 
-          trendUp={false} 
-        />
-      </div>
+      {isLoading && !stats ? (
+        <div className="flex h-[50vh] flex-col items-center justify-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground animate-pulse">Loading dashboard metrics...</p>
+        </div>
+      ) : stats ? (
+        <>
+          {/* 1. Top KPIs */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard 
+              title={`Revenue (${days}D)`}
+              value={stats.totalRevenue} 
+              prefix="₹" 
+              icon={IndianRupee} 
+              trendValue={stats.revenueTrend}
+              trendText="vs prev period"
+            />
+            <MetricCard 
+              title={`Orders (${days}D)`}
+              value={stats.totalOrders} 
+              icon={ShoppingCart} 
+              trendValue={stats.ordersTrend}
+              trendText="vs prev period"
+            />
+            <MetricCard 
+              title="Active Products" 
+              value={stats.activeProducts} 
+              icon={Package} 
+              trendText="in catalog"
+            />
+            <MetricCard 
+              title="Low Stock Alerts" 
+              value={stats.inventoryHealth.low + stats.inventoryHealth.outOfStock} 
+              icon={TrendingUp} 
+              trendText="needs attention" 
+              trendUp={false} // Force red legacy formatting if trendValue isn't used
+            />
+          </div>
 
-      {/* 2. Revenue Charts & Category Distribution */}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
-        <Card className="lg:col-span-2 shadow-sm border-border/50">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Activity className="h-4 w-4 text-primary" />
-                7-Day Revenue Trend
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <RevenueChart data={stats.weeklyRevenue} />
-          </CardContent>
-        </Card>
+          {/* 2. Revenue & Orders Trend (Dominant Chart) */}
+          <Card className="shadow-sm border-border/50">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-primary" />
+                  Sales vs Orders Trend
+                </CardTitle>
+                <CardDescription>Daily revenue area with operational order volume.</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <SalesOrdersChart data={stats.trendData} />
+            </CardContent>
+          </Card>
 
-        <Card className="shadow-sm border-border/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Package className="h-4 w-4 text-primary" />
-              Category Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <CategoryDistribution data={stats.categoryDistribution} />
-          </CardContent>
-        </Card>
-      </div>
+          {/* 3. Business Intelligence Charts */}
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+            <Card className="shadow-sm border-border/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-primary" />
+                  Top Selling Products
+                </CardTitle>
+                <CardDescription>Highest revenue-generating items.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <TopProductsChart data={stats.topProducts} />
+              </CardContent>
+            </Card>
 
-      {/* 3. AI Insights (Premium Container) */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="relative overflow-hidden border-indigo-500/20 shadow-md group">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 -z-10 transition-opacity group-hover:opacity-100 opacity-50" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-indigo-500" />
-                Daily AI Summary
-              </CardTitle>
-              <CardDescription>Instant business performance analysis.</CardDescription>
-            </div>
-            <Button onClick={handleGenerateSummary} disabled={isGeneratingAI} variant="secondary" size="sm" className="bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 dark:text-indigo-400">
-              {isGeneratingAI ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Generate'}
-            </Button>
-          </CardHeader>
-          <CardContent className="pt-4">
-            {aiSummary ? (
-              <div className="text-sm leading-relaxed text-foreground/90 font-medium">
-                {aiSummary}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground italic flex items-center gap-2">
-                Click generate to synthesize today's data...
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            <Card className="shadow-sm border-border/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Package className="h-4 w-4 text-primary" />
+                  Category Distribution
+                </CardTitle>
+                <CardDescription>Sales distribution by category.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <CategoryDistribution data={stats.categoryDistribution} />
+              </CardContent>
+            </Card>
+          </div>
 
-        <Card className="relative overflow-hidden border-emerald-500/20 shadow-md group">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 -z-10 transition-opacity group-hover:opacity-100 opacity-50" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <BrainCircuit className="h-4 w-4 text-emerald-500" />
-                Restock Intelligence
-              </CardTitle>
-              <CardDescription>AI-driven inventory forecasting.</CardDescription>
-            </div>
-            <Button onClick={handleGenerateRestock} disabled={isGeneratingRestock} variant="secondary" size="sm" className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400">
-              {isGeneratingRestock ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Analyze'}
-            </Button>
-          </CardHeader>
-          <CardContent className="pt-4">
-            {restockInsights ? (
-              <div className="text-sm leading-relaxed text-foreground/90 font-medium">
-                {restockInsights}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground italic">
-                Click to scan inventory health levels...
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 4. Recent Activity & Inventory Health */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="shadow-sm border-border/50 flex flex-col">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold">Needs Restock</CardTitle>
-            <CardDescription>Products running below minimum threshold.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1">
-            {stats.lowStockProducts.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8 border border-dashed rounded-lg bg-muted/10">
-                <Package className="h-8 w-8 text-muted-foreground mb-3 opacity-50" />
-                <p className="text-sm font-medium">All inventory levels look good!</p>
-                <p className="text-xs text-muted-foreground mt-1">No products are currently below their low stock threshold.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {stats.lowStockProducts.map((p: any) => (
-                  <div key={p.id} className="flex justify-between items-center p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
-                    <div className="flex flex-col">
-                      <span className="font-medium text-sm">{p.name}</span>
-                      <span className="text-xs text-muted-foreground">Threshold: {p.lowStockThreshold}</span>
-                    </div>
-                    <Badge variant="destructive" className="bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200 dark:border-rose-800">
-                      {p.stock} left
-                    </Badge>
+          {/* 4. AI Insights (Premium Container) */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card className="relative overflow-hidden border-indigo-500/20 shadow-md group">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 -z-10 transition-opacity group-hover:opacity-100 opacity-50" />
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div>
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-indigo-500" />
+                    Daily AI Summary
+                  </CardTitle>
+                  <CardDescription>Instant business performance analysis.</CardDescription>
+                </div>
+                <Button onClick={handleGenerateSummary} disabled={isGeneratingAI} variant="secondary" size="sm" className="bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 dark:text-indigo-400">
+                  {isGeneratingAI ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Generate'}
+                </Button>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {aiSummary ? (
+                  <div className="text-sm leading-relaxed text-foreground/90 font-medium">
+                    {aiSummary}
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border-border/50">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold">Recent Orders</CardTitle>
-            <CardDescription>Latest completed transactions.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {stats.recentOrders.length === 0 ? (
-               <div className="h-full flex flex-col items-center justify-center text-center p-8 border border-dashed rounded-lg bg-muted/10">
-                 <ShoppingCart className="h-8 w-8 text-muted-foreground mb-3 opacity-50" />
-                 <p className="text-sm font-medium">No recent orders found.</p>
-               </div>
-            ) : (
-              <div className="space-y-3">
-                {stats.recentOrders.map((order: any) => (
-                  <div key={order.id} className="flex justify-between items-center p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
-                    <div className="flex flex-col">
-                      <span className="font-medium text-sm">{order.invoiceNumber}</span>
-                      <span className="text-xs text-muted-foreground">{order.customerName || 'Walk-in'} • {order.itemsCount} items</span>
-                    </div>
-                    <div className="font-bold">₹{order.totalAmount.toFixed(2)}</div>
+                ) : (
+                  <div className="text-sm text-muted-foreground italic flex items-center gap-2">
+                    Click generate to synthesize today's data...
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="relative overflow-hidden border-emerald-500/20 shadow-md group">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 -z-10 transition-opacity group-hover:opacity-100 opacity-50" />
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div>
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <BrainCircuit className="h-4 w-4 text-emerald-500" />
+                    Restock Intelligence
+                  </CardTitle>
+                  <CardDescription>AI-driven inventory forecasting.</CardDescription>
+                </div>
+                <Button onClick={handleGenerateRestock} disabled={isGeneratingRestock} variant="secondary" size="sm" className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400">
+                  {isGeneratingRestock ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Analyze'}
+                </Button>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {restockInsights ? (
+                  <div className="text-sm leading-relaxed text-foreground/90 font-medium">
+                    {restockInsights}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground italic">
+                    Click to scan inventory health levels...
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 5. Operational Monitoring & Recent Activity */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className="shadow-sm border-border/50 flex flex-col">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Inventory Health
+                </CardTitle>
+                <CardDescription>Real-time operational stock status.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1">
+                <InventoryHealth data={stats.inventoryHealth} />
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border-border/50">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <ShoppingCart className="h-4 w-4 text-primary" />
+                  Recent Activity
+                </CardTitle>
+                <CardDescription>Latest completed transactions.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {stats.recentOrders.length === 0 ? (
+                   <div className="h-[120px] flex flex-col items-center justify-center text-center p-4 border border-dashed rounded-md bg-muted/10">
+                     <ShoppingCart className="h-8 w-8 text-muted-foreground mb-3 opacity-50" />
+                     <p className="text-sm font-medium">No recent orders found.</p>
+                   </div>
+                ) : (
+                  <div className="space-y-3">
+                    {stats.recentOrders.map((order: any) => (
+                      <div key={order.id} className="flex justify-between items-center p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm">{order.invoiceNumber}</span>
+                          <span className="text-xs text-muted-foreground">{order.customerName || 'Walk-in'} • {order.itemsCount} items</span>
+                        </div>
+                        <div className="font-bold">₹{order.totalAmount.toFixed(2)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
