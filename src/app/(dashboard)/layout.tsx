@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { logoutAction } from '@/actions/auth.actions';
-import { Package, ShoppingCart, LayoutDashboard, History, LogOut, FileSpreadsheet } from 'lucide-react';
+import { Package, ShoppingCart, LayoutDashboard, History, LogOut, FileSpreadsheet, Tags } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -13,6 +13,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'POS Billing', href: '/pos', icon: ShoppingCart },
     { name: 'Products', href: '/products', icon: Package },
+    { name: 'Categories', href: '/categories', icon: Tags },
     { name: 'Orders History', href: '/orders', icon: History },
     { name: 'Reports', href: '/reports', icon: FileSpreadsheet },
   ];

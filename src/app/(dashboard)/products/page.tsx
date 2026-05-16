@@ -179,7 +179,7 @@ export default function ProductsPage() {
                 <TableRow key={product.id} className={!product.isActive ? 'opacity-50' : ''}>
                   <TableCell className="font-medium">{product.sku}</TableCell>
                   <TableCell>{product.name}</TableCell>
-                  <TableCell>{product.category}</TableCell>
+                  <TableCell>{product.category?.name}</TableCell>
                   <TableCell className="text-right">₹{product.price.toFixed(2)}</TableCell>
                   <TableCell className="text-right">
                     <Badge variant={product.stock <= product.lowStockThreshold ? 'destructive' : 'secondary'}>

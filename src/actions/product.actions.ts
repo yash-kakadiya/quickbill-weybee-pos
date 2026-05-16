@@ -12,8 +12,10 @@ export async function getProducts(search?: string) {
         OR: [
           { name: { contains: search, mode: 'insensitive' } },
           { sku: { contains: search, mode: 'insensitive' } },
+          { category: { name: { contains: search, mode: 'insensitive' } } },
         ],
       } : undefined,
+      include: { category: true },
       orderBy: { createdAt: 'desc' },
     });
     // Serialize decimal to numbers for client safety
@@ -138,12 +140,12 @@ export async function getProductsAdvanced(filters: AISearchParams) {
       whereClause.OR = [
         { name: { contains: filters.keyword, mode: 'insensitive' } },
         { sku: { contains: filters.keyword, mode: 'insensitive' } },
-        { category: { contains: filters.keyword, mode: 'insensitive' } },
+        { category: { name: { contains: filters.keyword, mode: 'insensitive' } } },
       ];
     }
 
     if (filters.category) {
-      whereClause.category = { contains: filters.category, mode: 'insensitive' };
+      whereClause.category = { name: { contains: filters.category, mode: 'insensitive' } };
     }
 
     if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
@@ -173,6 +175,7 @@ export async function getProductsAdvanced(filters: AISearchParams) {
     
     const products = await prisma.product.findMany({
       where: whereClause,
+      include: { category: true },
       orderBy: filters.popularity 
         ? { orderItems: { _count: 'desc' } }
         : { createdAt: 'desc' },

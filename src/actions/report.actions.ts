@@ -30,6 +30,7 @@ export async function getReportData(type: string, daysStr: string = '7') {
 
     if (type === 'inventory') {
       const products = await prisma.product.findMany({
+        include: { category: true },
         orderBy: { stock: 'asc' }
       });
       return {
@@ -37,7 +38,7 @@ export async function getReportData(type: string, daysStr: string = '7') {
         data: products.map(p => ({
           SKU: p.sku,
           Name: p.name,
-          Category: p.category,
+          Category: p.category?.name || 'Uncategorized',
           Price: Number(p.price),
           Stock: p.stock,
           Status: p.isActive ? 'Active' : 'Inactive'
@@ -46,13 +47,13 @@ export async function getReportData(type: string, daysStr: string = '7') {
     }
 
     if (type === 'low_stock') {
-      const products = await prisma.$queryRaw`SELECT sku, name, category, price, stock, "lowStockThreshold" FROM "Product" WHERE "isActive" = true AND stock <= "lowStockThreshold" ORDER BY stock ASC`;
+      const products = await prisma.$queryRaw`SELECT p.sku, p.name, c.name as category, p.price, p.stock, p."lowStockThreshold" FROM "Product" p LEFT JOIN "Category" c ON p."categoryId" = c.id WHERE p."isActive" = true AND p.stock <= p."lowStockThreshold" ORDER BY p.stock ASC`;
       return {
         success: true,
         data: (products as any[]).map(p => ({
           SKU: p.sku,
           Name: p.name,
-          Category: p.category,
+          Category: p.category || 'Uncategorized',
           Price: Number(p.price),
           Stock: p.stock,
           Threshold: p.lowStockThreshold

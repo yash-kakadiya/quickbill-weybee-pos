@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { productSchema, ProductInput } from '@/lib/validations/product';
 import { createProduct, updateProduct } from '@/actions/product.actions';
+import { getActiveCategories } from '@/actions/category.actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -26,13 +27,24 @@ interface ProductDialogProps {
 
 export function ProductDialog({ open, onOpenChange, productToEdit }: ProductDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadCategories() {
+      const res = await getActiveCategories();
+      if (res.success && res.data) {
+        setCategories(res.data);
+      }
+    }
+    if (open) loadCategories();
+  }, [open]);
 
   const form = useForm<z.input<typeof productSchema>, any, ProductInput>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: '',
       sku: '',
-      category: '',
+      categoryId: '',
       description: '',
       price: 0,
       stock: 0,
@@ -45,7 +57,7 @@ export function ProductDialog({ open, onOpenChange, productToEdit }: ProductDial
       form.reset({
         name: productToEdit.name,
         sku: productToEdit.sku,
-        category: productToEdit.category,
+        categoryId: productToEdit.categoryId,
         description: productToEdit.description || '',
         price: productToEdit.price,
         stock: productToEdit.stock,
@@ -101,8 +113,17 @@ export function ProductDialog({ open, onOpenChange, productToEdit }: ProductDial
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Category</label>
-              <Input {...form.register('category')} disabled={isLoading} />
-              {form.formState.errors.category && <p className="text-sm text-destructive">{form.formState.errors.category.message}</p>}
+              <select
+                {...form.register('categoryId')}
+                disabled={isLoading}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">Select a category...</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+              {form.formState.errors.categoryId && <p className="text-sm text-destructive">{form.formState.errors.categoryId.message}</p>}
             </div>
 
             <div className="space-y-2">
