@@ -6,17 +6,11 @@ import { generateDailySummary, generateRestockInsights } from '@/actions/ai.acti
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Package, ShoppingCart, IndianRupee, Sparkles, Loader2, BrainCircuit } from 'lucide-react';
+import { TrendingUp, Package, ShoppingCart, IndianRupee, Sparkles, Loader2, BrainCircuit, Activity } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
-} from 'recharts';
+import { MetricCard } from '@/components/ui/dashboard/metric-card';
+import { RevenueChart } from '@/components/ui/charts/revenue-chart';
+import { CategoryDistribution } from '@/components/ui/charts/category-distribution';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<any>(null);
@@ -65,140 +59,198 @@ export default function DashboardPage() {
   }
 
   if (isLoading) {
-    return <div className="flex h-[50vh] items-center justify-center text-muted-foreground">Loading dashboard...</div>;
+    return (
+      <div className="flex h-[60vh] flex-col items-center justify-center space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground animate-pulse">Loading dashboard metrics...</p>
+      </div>
+    );
   }
 
   if (!stats) return null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Business Overview</h1>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Business Overview</h1>
+        <p className="text-muted-foreground">Monitor your store's performance and AI insights.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Revenue</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₹{stats.todayRevenue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">Out of ₹{stats.totalRevenue.toFixed(2)} lifetime</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Orders</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+{stats.todayOrders}</div>
-            <p className="text-xs text-muted-foreground">{stats.totalOrders} total orders</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Products</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.activeProducts}</div>
-            <p className="text-xs text-muted-foreground">in your catalogue</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock Alerts</CardTitle>
-            <TrendingUp className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{stats.lowStockProducts.length}</div>
-            <p className="text-xs text-muted-foreground">items need restocking</p>
-          </CardContent>
-        </Card>
+      {/* 1. Top KPIs */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard 
+          title="Today's Revenue" 
+          value={stats.todayRevenue} 
+          prefix="₹" 
+          icon={IndianRupee} 
+          trend="vs lifetime avg" 
+          trendUp={true} 
+        />
+        <MetricCard 
+          title="Today's Orders" 
+          value={stats.todayOrders} 
+          icon={ShoppingCart} 
+          trend={`${stats.totalOrders} total lifetime`} 
+          trendUp={true} 
+        />
+        <MetricCard 
+          title="Active Products" 
+          value={stats.activeProducts} 
+          icon={Package} 
+        />
+        <MetricCard 
+          title="Low Stock Alerts" 
+          value={stats.lowStockProducts.length} 
+          icon={TrendingUp} 
+          trend="needs attention" 
+          trendUp={false} 
+        />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader className="flex flex-row items-center justify-between">
+      {/* 2. Revenue Charts & Category Distribution */}
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+        <Card className="lg:col-span-2 shadow-sm border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
-              <CardTitle>AI Smart Summary</CardTitle>
-              <CardDescription>Get instant insights powered by Gemini.</CardDescription>
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" />
+                7-Day Revenue Trend
+              </CardTitle>
             </div>
-            <Button onClick={handleGenerateSummary} disabled={isGeneratingAI} variant="outline" size="sm">
-              {isGeneratingAI ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-blue-500" />}
-              Generate Insights
+          </CardHeader>
+          <CardContent className="pt-4">
+            <RevenueChart data={stats.weeklyRevenue} />
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-border/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Package className="h-4 w-4 text-primary" />
+              Category Distribution
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <CategoryDistribution data={stats.categoryDistribution} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 3. AI Insights (Premium Container) */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="relative overflow-hidden border-indigo-500/20 shadow-md group">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 -z-10 transition-opacity group-hover:opacity-100 opacity-50" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-indigo-500" />
+                Daily AI Summary
+              </CardTitle>
+              <CardDescription>Instant business performance analysis.</CardDescription>
+            </div>
+            <Button onClick={handleGenerateSummary} disabled={isGeneratingAI} variant="secondary" size="sm" className="bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 dark:text-indigo-400">
+              {isGeneratingAI ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Generate'}
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4">
             {aiSummary ? (
-              <div className="p-4 bg-primary/10 rounded-md border border-primary/20 text-sm leading-relaxed">
+              <div className="text-sm leading-relaxed text-foreground/90 font-medium">
                 {aiSummary}
               </div>
             ) : (
-              <div className="h-[100px] flex items-center justify-center text-muted-foreground border border-dashed rounded-md">
-                Click generate for a quick AI summary of today's performance.
+              <div className="text-sm text-muted-foreground italic flex items-center gap-2">
+                Click generate to synthesize today's data...
               </div>
             )}
-
-            <div className="mt-8 h-[300px]">
-              <h3 className="text-sm font-medium mb-4 text-muted-foreground">Top Selling Products (Overall)</h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.topProducts}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip />
-                  <Bar dataKey="quantity" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
           </CardContent>
         </Card>
 
-        <div className="col-span-3 flex flex-col gap-4">
-          <Card className="flex-1 flex flex-col">
-            <CardHeader>
-              <CardTitle>Needs Restock</CardTitle>
-              <CardDescription>Products running below threshold.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col gap-4">
-               {stats.lowStockProducts.length === 0 ? (
-                 <p className="text-sm text-muted-foreground">All inventory levels look good!</p>
-               ) : (
-                 stats.lowStockProducts.map((p: any) => (
-                   <div key={p.id} className="flex justify-between items-center border-b pb-2 last:border-0">
-                      <span className="font-medium text-sm">{p.name}</span>
-                      <Badge variant="destructive">{p.stock} left</Badge>
-                   </div>
-                 ))
-               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Restock Intelligence</CardTitle>
+        <Card className="relative overflow-hidden border-emerald-500/20 shadow-md group">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 -z-10 transition-opacity group-hover:opacity-100 opacity-50" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <BrainCircuit className="h-4 w-4 text-emerald-500" />
+                Restock Intelligence
+              </CardTitle>
+              <CardDescription>AI-driven inventory forecasting.</CardDescription>
+            </div>
+            <Button onClick={handleGenerateRestock} disabled={isGeneratingRestock} variant="secondary" size="sm" className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400">
+              {isGeneratingRestock ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Analyze'}
+            </Button>
+          </CardHeader>
+          <CardContent className="pt-4">
+            {restockInsights ? (
+              <div className="text-sm leading-relaxed text-foreground/90 font-medium">
+                {restockInsights}
               </div>
-              <Button onClick={handleGenerateRestock} disabled={isGeneratingRestock} variant="secondary" size="sm">
-                {isGeneratingRestock ? <Loader2 className="h-4 w-4 animate-spin" /> : <BrainCircuit className="h-4 w-4 text-purple-500" />}
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {restockInsights ? (
-                <div className="text-sm leading-relaxed text-muted-foreground">
-                  {restockInsights}
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground italic">
-                  Click to analyze inventory health...
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+            ) : (
+              <div className="text-sm text-muted-foreground italic">
+                Click to scan inventory health levels...
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 4. Recent Activity & Inventory Health */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="shadow-sm border-border/50 flex flex-col">
+          <CardHeader>
+            <CardTitle className="text-base font-semibold">Needs Restock</CardTitle>
+            <CardDescription>Products running below minimum threshold.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1">
+            {stats.lowStockProducts.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-8 border border-dashed rounded-lg bg-muted/10">
+                <Package className="h-8 w-8 text-muted-foreground mb-3 opacity-50" />
+                <p className="text-sm font-medium">All inventory levels look good!</p>
+                <p className="text-xs text-muted-foreground mt-1">No products are currently below their low stock threshold.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {stats.lowStockProducts.map((p: any) => (
+                  <div key={p.id} className="flex justify-between items-center p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">{p.name}</span>
+                      <span className="text-xs text-muted-foreground">Threshold: {p.lowStockThreshold}</span>
+                    </div>
+                    <Badge variant="destructive" className="bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400 border-rose-200 dark:border-rose-800">
+                      {p.stock} left
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-border/50">
+          <CardHeader>
+            <CardTitle className="text-base font-semibold">Recent Orders</CardTitle>
+            <CardDescription>Latest completed transactions.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {stats.recentOrders.length === 0 ? (
+               <div className="h-full flex flex-col items-center justify-center text-center p-8 border border-dashed rounded-lg bg-muted/10">
+                 <ShoppingCart className="h-8 w-8 text-muted-foreground mb-3 opacity-50" />
+                 <p className="text-sm font-medium">No recent orders found.</p>
+               </div>
+            ) : (
+              <div className="space-y-3">
+                {stats.recentOrders.map((order: any) => (
+                  <div key={order.id} className="flex justify-between items-center p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">{order.invoiceNumber}</span>
+                      <span className="text-xs text-muted-foreground">{order.customerName || 'Walk-in'} • {order.itemsCount} items</span>
+                    </div>
+                    <div className="font-bold">₹{order.totalAmount.toFixed(2)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

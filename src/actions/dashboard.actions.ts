@@ -9,6 +9,8 @@ export async function getDashboardStats() {
     const startOfTodayDate = startOfDay(today);
     const endOfTodayDate = endOfDay(today);
 
+    const sevenDaysAgo = startOfDay(subDays(today, 6));
+
     const [
       totalOrders,
       todayOrders,
@@ -17,7 +19,9 @@ export async function getDashboardStats() {
       activeProducts,
       lowStockProducts,
       recentOrders,
-      topSellingItems
+      topSellingItems,
+      weeklyOrdersRaw,
+      categoryDistributionRaw
     ] = await Promise.all([
       prisma.order.count({ where: { status: 'COMPLETED' } }),
       prisma.order.count({
@@ -51,7 +55,20 @@ export async function getDashboardStats() {
         _sum: { quantity: true },
         orderBy: { _sum: { quantity: 'desc' } },
         take: 5
-      })
+      }),
+      // Revenue over last 7 days
+      prisma.order.findMany({
+        where: {
+          status: 'COMPLETED',
+          createdAt: { gte: sevenDaysAgo }
+        },
+        select: {
+          createdAt: true,
+          totalAmount: true
+        }
+      }),
+      // Category distribution
+      prisma.$queryRaw`SELECT c.name, COUNT(p.id) as quantity FROM "Category" c LEFT JOIN "Product" p ON p."categoryId" = c.id WHERE p."isActive" = true GROUP BY c.name ORDER BY quantity DESC LIMIT 5`
     ]);
 
     // Fetch product details for top selling
@@ -64,6 +81,31 @@ export async function getDashboardStats() {
         };
       })
     );
+
+    // Process weekly revenue into exactly 7 days
+    const weeklyRevenueMap = new Map();
+    for (let i = 6; i >= 0; i--) {
+      const d = startOfDay(subDays(today, i)).toISOString();
+      weeklyRevenueMap.set(d, 0);
+    }
+    
+    for (const order of weeklyOrdersRaw) {
+      const dayStr = startOfDay(order.createdAt).toISOString();
+      if (weeklyRevenueMap.has(dayStr)) {
+        weeklyRevenueMap.set(dayStr, weeklyRevenueMap.get(dayStr) + Number(order.totalAmount));
+      }
+    }
+    
+    const weeklyRevenue = Array.from(weeklyRevenueMap.entries()).map(([Date, Amount]) => ({
+      Date,
+      Amount
+    }));
+
+    // Process category distribution
+    const categoryDistribution = (categoryDistributionRaw as any[]).map(c => ({
+      name: c.name,
+      quantity: Number(c.quantity)
+    }));
 
     return {
       success: true,
@@ -83,7 +125,9 @@ export async function getDashboardStats() {
           totalAmount: Number(o.totalAmount),
           itemsCount: o.items.reduce((sum, item) => sum + item.quantity, 0)
         })),
-        topProducts: topProductsWithNames
+        topProducts: topProductsWithNames,
+        weeklyRevenue,
+        categoryDistribution
       }
     };
   } catch (error) {

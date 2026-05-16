@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 interface ProductDialogProps {
   open: boolean;
@@ -90,64 +91,101 @@ export function ProductDialog({ open, onOpenChange, productToEdit }: ProductDial
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{productToEdit ? 'Edit Product' : 'Add Product'}</DialogTitle>
-          <DialogDescription>
-            {productToEdit ? 'Make changes to your product here.' : 'Add a new product to your catalogue.'}
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2 col-span-2">
-              <label className="text-sm font-medium">Name</label>
-              <Input {...form.register('name')} disabled={isLoading} />
-              {form.formState.errors.name && <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>}
+      <DialogContent className="sm:max-w-[600px] bg-card overflow-hidden p-0 border-border/50 shadow-lg">
+        <div className="px-6 pt-6 pb-4 border-b bg-muted/20">
+          <DialogHeader>
+            <DialogTitle className="text-xl">{productToEdit ? 'Edit Product' : 'Add Product'}</DialogTitle>
+            <DialogDescription>
+              {productToEdit ? 'Make changes to your product details below.' : 'Add a new product to your catalogue.'}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+        
+        <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 pt-4 space-y-5">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-5">
+            <div className="space-y-1.5 col-span-2">
+              <label className="text-sm font-medium text-foreground">Product Name</label>
+              <Input 
+                {...form.register('name')} 
+                disabled={isLoading} 
+                className="transition-all focus-visible:ring-primary shadow-sm"
+                placeholder="e.g. Premium Wireless Headphones"
+              />
+              {form.formState.errors.name && <p className="text-xs text-destructive mt-1 font-medium">{form.formState.errors.name.message}</p>}
             </div>
             
-            <div className="space-y-2">
-              <label className="text-sm font-medium">SKU/Code</label>
-              <Input {...form.register('sku')} disabled={isLoading || !!productToEdit} />
-              {form.formState.errors.sku && <p className="text-sm text-destructive">{form.formState.errors.sku.message}</p>}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">SKU / Code</label>
+              <Input 
+                {...form.register('sku')} 
+                disabled={isLoading || !!productToEdit} 
+                className={`transition-all shadow-sm ${!!productToEdit ? 'bg-muted/50 text-muted-foreground cursor-not-allowed' : 'focus-visible:ring-primary'}`}
+                placeholder="e.g. WH-1000XM4"
+              />
+              {form.formState.errors.sku && <p className="text-xs text-destructive mt-1 font-medium">{form.formState.errors.sku.message}</p>}
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Category</label>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Category</label>
               <select
                 {...form.register('categoryId')}
                 disabled={isLoading}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">Select a category...</option>
                 {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
               </select>
-              {form.formState.errors.categoryId && <p className="text-sm text-destructive">{form.formState.errors.categoryId.message}</p>}
+              {form.formState.errors.categoryId && <p className="text-xs text-destructive mt-1 font-medium">{form.formState.errors.categoryId.message}</p>}
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Price (₹)</label>
-              <Input type="number" step="0.01" {...form.register('price')} disabled={isLoading} />
-              {form.formState.errors.price && <p className="text-sm text-destructive">{form.formState.errors.price.message}</p>}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground flex items-center justify-between">
+                Price
+                <span className="text-xs text-muted-foreground font-normal">in Rupees (₹)</span>
+              </label>
+              <Input 
+                type="number" 
+                step="0.01" 
+                {...form.register('price')} 
+                disabled={isLoading} 
+                className="transition-all focus-visible:ring-primary shadow-sm"
+              />
+              {form.formState.errors.price && <p className="text-xs text-destructive mt-1 font-medium">{form.formState.errors.price.message}</p>}
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Stock Quantity</label>
-              <Input type="number" {...form.register('stock')} disabled={isLoading} />
-              {form.formState.errors.stock && <p className="text-sm text-destructive">{form.formState.errors.stock.message}</p>}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-foreground">Current Stock</label>
+              <Input 
+                type="number" 
+                {...form.register('stock')} 
+                disabled={isLoading} 
+                className="transition-all focus-visible:ring-primary shadow-sm"
+              />
+              {form.formState.errors.stock && <p className="text-xs text-destructive mt-1 font-medium">{form.formState.errors.stock.message}</p>}
             </div>
 
-            <div className="space-y-2 col-span-2">
-              <label className="text-sm font-medium">Low Stock Alert at</label>
-              <Input type="number" {...form.register('lowStockThreshold')} disabled={isLoading} />
-              {form.formState.errors.lowStockThreshold && <p className="text-sm text-destructive">{form.formState.errors.lowStockThreshold.message}</p>}
+            <div className="space-y-1.5 col-span-2">
+              <label className="text-sm font-medium text-foreground">Low Stock Threshold</label>
+              <Input 
+                type="number" 
+                {...form.register('lowStockThreshold')} 
+                disabled={isLoading} 
+                className="transition-all focus-visible:ring-primary shadow-sm"
+              />
+              <p className="text-xs text-muted-foreground">You will be alerted when stock falls below this number.</p>
+              {form.formState.errors.lowStockThreshold && <p className="text-xs text-destructive mt-1 font-medium">{form.formState.errors.lowStockThreshold.message}</p>}
             </div>
           </div>
           
-          <DialogFooter>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Saving...' : 'Save Product'}
+          <DialogFooter className="pt-4 mt-6 border-t border-border/50 gap-2 sm:gap-0">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isLoading} className="mt-2 sm:mt-0">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading} className="shadow-sm">
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {productToEdit ? 'Save Changes' : 'Create Product'}
             </Button>
           </DialogFooter>
         </form>

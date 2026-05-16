@@ -1,5 +1,7 @@
 'use server';
 
+import { redirect } from 'next/navigation';
+
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
 import { setSession, clearSession } from '@/lib/auth';
@@ -43,5 +45,5 @@ export async function loginAction(data: LoginInput) {
 
 export async function logoutAction() {
   await clearSession();
-  return { success: true };
+  redirect('/login');
 }

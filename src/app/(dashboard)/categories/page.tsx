@@ -14,8 +14,9 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { CategoryDialog } from '@/components/categories/category-dialog';
-import { Plus, Search, Edit2, Power, PowerOff } from 'lucide-react';
+import { Plus, Search, Edit2, Power, PowerOff, Loader2, Tags } from 'lucide-react';
 import { toast } from 'sonner';
+import { EmptyState } from '@/components/ui/empty-states/empty-state';
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<any[]>([]);
@@ -64,81 +65,98 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight">Categories</h1>
-        <Button onClick={handleAddNew}>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Categories</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Organize your products for easy discovery.</p>
+        </div>
+        <Button onClick={handleAddNew} className="shadow-sm">
           <Plus className="mr-2 h-4 w-4" /> Add Category
         </Button>
       </div>
 
       <div className="flex items-center relative max-w-sm">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           type="search"
           placeholder="Search categories..."
-          className="pl-8"
+          className="pl-9 bg-card shadow-sm transition-all focus-visible:ring-primary"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Slug</TableHead>
-              <TableHead>Products Count</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
+      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-muted/50">
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  Loading categories...
-                </TableCell>
+                <TableHead className="whitespace-nowrap">Name</TableHead>
+                <TableHead className="whitespace-nowrap">Slug</TableHead>
+                <TableHead className="whitespace-nowrap">Products Count</TableHead>
+                <TableHead className="whitespace-nowrap">Status</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
               </TableRow>
-            ) : categories.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  No categories found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              categories.map((category) => (
-                <TableRow key={category.id} className={!category.isActive ? 'opacity-50' : ''}>
-                  <TableCell className="font-medium">{category.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{category.slug}</TableCell>
-                  <TableCell>{category._count?.products || 0}</TableCell>
-                  <TableCell>
-                    {category.isActive ? (
-                      <Badge variant="default" className="bg-green-600">Active</Badge>
-                    ) : (
-                      <Badge variant="secondary">Inactive</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(category)} title="Edit">
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => handleToggleStatus(category)}
-                      title={category.isActive ? "Deactivate" : "Activate"}
-                      className={category.isActive ? 'text-destructive' : 'text-green-600'}
-                    >
-                      {category.isActive ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
-                    </Button>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-32 text-center">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : categories.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-64 text-center p-0">
+                    <EmptyState 
+                      icon={Tags}
+                      title="No categories found"
+                      description="Get started by creating your first product category."
+                      actionLabel="Add Category"
+                      onAction={handleAddNew}
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                categories.map((category) => (
+                  <TableRow key={category.id} className={`hover:bg-muted/40 transition-colors ${!category.isActive ? 'opacity-60 bg-muted/20' : ''}`}>
+                    <TableCell className="font-medium">{category.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{category.slug}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-medium bg-background">
+                        {category._count?.products || 0}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {category.isActive ? (
+                        <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800 font-medium">Active</Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-muted text-muted-foreground font-medium">Inactive</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(category)} title="Edit" className="h-8 w-8 hover:bg-primary/10 hover:text-primary">
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleToggleStatus(category)}
+                          title={category.isActive ? "Deactivate" : "Activate"}
+                          className={`h-8 w-8 ${category.isActive ? 'hover:bg-rose-100 hover:text-rose-600 dark:hover:bg-rose-900/30' : 'hover:bg-emerald-100 hover:text-emerald-600 dark:hover:bg-emerald-900/30'}`}
+                        >
+                          {category.isActive ? <PowerOff className="h-4 w-4 text-rose-500" /> : <Power className="h-4 w-4 text-emerald-500" />}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <CategoryDialog 
