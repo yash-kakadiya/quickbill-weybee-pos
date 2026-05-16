@@ -200,7 +200,7 @@ async function main() {
 
     for (let o = 0; o < numOrdersToday; o++) {
       const numItemsInOrder = getRandomInt(1, 4);
-      const itemsToInclude = [];
+      const itemsToInclude: any[] = [];
       let orderSubtotal = 0;
 
       // Select products for this order

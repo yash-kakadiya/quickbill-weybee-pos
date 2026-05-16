@@ -18,6 +18,8 @@ import { Plus, Search, Edit2, Power, PowerOff, Loader2, Tags } from 'lucide-reac
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/ui/empty-states/empty-state';
 
+import { CategoryDetailsDialog } from '@/components/categories/category-details-dialog';
+
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -25,6 +27,7 @@ export default function CategoriesPage() {
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [selectedCategory, setSelectedCategory] = useState<any | null>(null);
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
@@ -44,7 +47,8 @@ export default function CategoriesPage() {
     setIsLoading(false);
   }
 
-  async function handleToggleStatus(category: any) {
+  async function handleToggleStatus(category: any, e: React.MouseEvent) {
+    e.stopPropagation();
     const result = await toggleCategoryStatus(category.id, !category.isActive);
     if (result.success) {
       toast.success(`${category.name} is now ${!category.isActive ? 'Active' : 'Inactive'}`);
@@ -54,7 +58,8 @@ export default function CategoriesPage() {
     }
   }
 
-  function handleEdit(category: any) {
+  function handleEdit(category: any, e: React.MouseEvent) {
+    e.stopPropagation();
     setEditingCategory(category);
     setIsDialogOpen(true);
   }
@@ -66,6 +71,25 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      <CategoryDetailsDialog 
+        category={selectedCategory} 
+        isOpen={!!selectedCategory} 
+        onClose={() => setSelectedCategory(null)} 
+        onEdit={(category) => {
+          setEditingCategory(category);
+          setIsDialogOpen(true);
+        }}
+        onToggleStatus={async (category) => {
+          const result = await toggleCategoryStatus(category.id, !category.isActive);
+          if (result.success) {
+            toast.success(`${category.name} is now ${!category.isActive ? 'Active' : 'Inactive'}`);
+            fetchCategories();
+          } else {
+            toast.error(result.error);
+          }
+        }}
+      />
+
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Categories</h1>
@@ -120,7 +144,11 @@ export default function CategoriesPage() {
                 </TableRow>
               ) : (
                 categories.map((category) => (
-                  <TableRow key={category.id} className={`hover:bg-muted/40 transition-colors ${!category.isActive ? 'opacity-60 bg-muted/20' : ''}`}>
+                  <TableRow 
+                    key={category.id} 
+                    className={`hover:bg-muted/40 transition-colors cursor-pointer ${!category.isActive ? 'opacity-60 bg-muted/20' : ''}`}
+                    onClick={() => setSelectedCategory(category)}
+                  >
                     <TableCell className="font-medium">{category.name}</TableCell>
                     <TableCell className="text-muted-foreground">{category.slug}</TableCell>
                     <TableCell>
@@ -137,13 +165,13 @@ export default function CategoriesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(category)} title="Edit" className="h-8 w-8 hover:bg-primary/10 hover:text-primary">
+                        <Button variant="ghost" size="icon" onClick={(e) => handleEdit(category, e)} title="Edit" className="h-8 w-8 hover:bg-primary/10 hover:text-primary">
                           <Edit2 className="h-4 w-4" />
                         </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          onClick={() => handleToggleStatus(category)}
+                          onClick={(e) => handleToggleStatus(category, e)}
                           title={category.isActive ? "Deactivate" : "Activate"}
                           className={`h-8 w-8 ${category.isActive ? 'hover:bg-rose-100 hover:text-rose-600 dark:hover:bg-rose-900/30' : 'hover:bg-emerald-100 hover:text-emerald-600 dark:hover:bg-emerald-900/30'}`}
                         >

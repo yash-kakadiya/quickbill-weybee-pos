@@ -20,14 +20,15 @@ import { EmptyState } from '@/components/ui/empty-states/empty-state';
 export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filterDate, setFilterDate] = useState<string>('');
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [filterDate]);
 
   async function fetchOrders() {
     setIsLoading(true);
-    const result = await getOrders();
+    const result = await getOrders(filterDate);
     if (result.success && result.data) {
       setOrders(result.data);
     } else {
@@ -56,6 +57,19 @@ export default function OrdersPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Order History</h1>
           <p className="text-muted-foreground mt-1 text-sm">View past transactions and manage cancellations.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          />
+          {filterDate && (
+            <Button variant="ghost" onClick={() => setFilterDate('')} className="h-9 px-3">
+              Clear
+            </Button>
+          )}
         </div>
       </div>
 

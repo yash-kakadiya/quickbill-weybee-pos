@@ -10,6 +10,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { ProductDetailsDialog } from '@/components/pos/product-details-dialog';
+
 interface CartItem {
   product: any;
   quantity: number;
@@ -22,6 +24,7 @@ export default function POSPage() {
   const cartRef = useRef<CartItem[]>([]);
   const [customerName, setCustomerName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
 
   // Sync ref with state (though we also update ref synchronously below)
   useEffect(() => {
@@ -119,9 +122,15 @@ export default function POSPage() {
 
   return (
     <div className="grid md:grid-cols-3 gap-6 h-[calc(100vh-120px)]">
+      <ProductDetailsDialog 
+        product={selectedProduct} 
+        isOpen={!!selectedProduct} 
+        onClose={() => setSelectedProduct(null)} 
+        onAddToCart={addToCart} 
+      />
       
       {/* Product Selection Area */}
-      <div className="md:col-span-2 flex flex-col gap-4">
+      <div className="md:col-span-2 flex flex-col gap-4 h-full overflow-hidden">
         <div className="flex items-center relative">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input 
@@ -132,16 +141,16 @@ export default function POSPage() {
           />
         </div>
         
-        <ScrollArea className="flex-1 border rounded-md p-4 bg-card">
+        <ScrollArea className="flex-1 border rounded-md p-4 bg-card overflow-auto">
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {products.map(product => (
               <Card 
                 key={product.id} 
-                className="cursor-pointer hover:border-primary transition-colors flex flex-col"
-                onClick={() => addToCart(product)}
+                className="cursor-pointer hover:border-primary transition-colors flex flex-col relative group"
+                onClick={() => setSelectedProduct(product)}
               >
                 <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-base line-clamp-1" title={product.name}>{product.name}</CardTitle>
+                  <CardTitle className="text-base line-clamp-1 pr-6" title={product.name}>{product.name}</CardTitle>
                   <p className="text-xs text-muted-foreground">{product.sku}</p>
                 </CardHeader>
                 <CardContent className="p-4 pt-0 flex-1 flex flex-col justify-end">
@@ -152,6 +161,17 @@ export default function POSPage() {
                     </span>
                   </div>
                 </CardContent>
+                <Button 
+                  size="icon" 
+                  className="absolute top-3 right-3 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-full shadow-md z-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addToCart(product);
+                  }}
+                  title="Quick Add to Cart"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </Card>
             ))}
             {products.length === 0 && (
@@ -164,7 +184,7 @@ export default function POSPage() {
       </div>
 
       {/* Cart Area */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 h-full overflow-hidden">
         <Card className="flex-1 flex flex-col overflow-hidden">
           <CardHeader className="bg-muted/50 py-4">
             <CardTitle className="flex items-center gap-2">

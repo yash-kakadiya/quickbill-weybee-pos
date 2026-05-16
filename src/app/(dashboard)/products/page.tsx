@@ -18,6 +18,7 @@ import { ProductDialog } from '@/components/products/product-dialog';
 import { Plus, Search, Edit2, Power, PowerOff, Sparkles, Loader2, X, PackageOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/ui/empty-states/empty-state';
+import { ProductDetailsDialog } from '@/components/pos/product-details-dialog';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -28,6 +29,7 @@ export default function ProductsPage() {
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
 
   useEffect(() => {
     if (!activeFilters) {
@@ -75,7 +77,8 @@ export default function ProductsPage() {
     setSearch('');
   }
 
-  async function handleToggleStatus(product: any) {
+  async function handleToggleStatus(product: any, e: React.MouseEvent) {
+    e.stopPropagation();
     const result = await toggleProductStatus(product.id, !product.isActive);
     if (result.success) {
       toast.success(`${product.name} is now ${!product.isActive ? 'Active' : 'Inactive'}`);
@@ -85,7 +88,8 @@ export default function ProductsPage() {
     }
   }
 
-  function handleEdit(product: any) {
+  function handleEdit(product: any, e: React.MouseEvent) {
+    e.stopPropagation();
     setEditingProduct(product);
     setIsDialogOpen(true);
   }
@@ -97,6 +101,27 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      <ProductDetailsDialog 
+        product={selectedProduct} 
+        isOpen={!!selectedProduct} 
+        onClose={() => setSelectedProduct(null)} 
+        onEdit={(product) => {
+          setEditingProduct(product);
+          setIsDialogOpen(true);
+        }}
+        onToggleStatus={async (product) => {
+          const result = await toggleProductStatus(product.id, !product.isActive);
+          if (result.success) {
+            toast.success(`${product.name} is now ${!product.isActive ? 'Active' : 'Inactive'}`);
+            fetchProducts();
+            // Optional: You could update selectedProduct here to reflect the change immediately in the closed popup state, 
+            // but closing it is standard UX for a state-changing action.
+          } else {
+            toast.error(result.error);
+          }
+        }}
+      />
+
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Products</h1>
@@ -138,7 +163,7 @@ export default function ProductsPage() {
               if (val === undefined || val === null || val === 'any' || val === '') return null;
               return (
                 <Badge key={key} variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                  {key}: {val.toString()}
+                  {key}: {val as string}
                 </Badge>
               );
             })}
@@ -184,7 +209,11 @@ export default function ProductsPage() {
                 </TableRow>
               ) : (
                 products.map((product) => (
-                  <TableRow key={product.id} className={`hover:bg-muted/40 transition-colors ${!product.isActive ? 'opacity-60 bg-muted/20' : ''}`}>
+                  <TableRow 
+                    key={product.id} 
+                    className={`hover:bg-muted/40 transition-colors cursor-pointer ${!product.isActive ? 'opacity-60 bg-muted/20' : ''}`}
+                    onClick={() => setSelectedProduct(product)}
+                  >
                     <TableCell className="font-medium">{product.sku}</TableCell>
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell>
@@ -207,13 +236,13 @@ export default function ProductsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(product)} title="Edit" className="h-8 w-8 hover:bg-primary/10 hover:text-primary">
+                        <Button variant="ghost" size="icon" onClick={(e) => handleEdit(product, e)} title="Edit" className="h-8 w-8 hover:bg-primary/10 hover:text-primary">
                           <Edit2 className="h-4 w-4" />
                         </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          onClick={() => handleToggleStatus(product)}
+                          onClick={(e) => handleToggleStatus(product, e)}
                           title={product.isActive ? "Deactivate" : "Activate"}
                           className={`h-8 w-8 ${product.isActive ? 'hover:bg-rose-100 hover:text-rose-600 dark:hover:bg-rose-900/30' : 'hover:bg-emerald-100 hover:text-emerald-600 dark:hover:bg-emerald-900/30'}`}
                         >

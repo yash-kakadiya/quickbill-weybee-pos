@@ -110,9 +110,23 @@ export async function createOrder(data: OrderInput) {
   }
 }
 
-export async function getOrders() {
+export async function getOrders(dateStr?: string) {
   try {
+    const whereClause: any = {};
+    if (dateStr) {
+      // dateStr should be in YYYY-MM-DD format
+      const startDate = new Date(dateStr);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(dateStr);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.createdAt = {
+        gte: startDate,
+        lte: endDate,
+      };
+    }
+
     const orders = await prisma.order.findMany({
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
       include: {
         items: {
