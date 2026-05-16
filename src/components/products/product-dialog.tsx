@@ -18,7 +18,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
+import { generateProductDescription } from '@/actions/ai.actions';
 
 interface ProductDialogProps {
   open: boolean;
@@ -28,6 +29,8 @@ interface ProductDialogProps {
 
 export function ProductDialog({ open, onOpenChange, productToEdit }: ProductDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
+  const [hasGenerated, setHasGenerated] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
 
   useEffect(() => {
@@ -68,6 +71,42 @@ export function ProductDialog({ open, onOpenChange, productToEdit }: ProductDial
       form.reset();
     }
   }, [productToEdit, open, form]);
+
+  async function handleGenerateDescription() {
+    const name = form.getValues('name');
+    const categoryId = form.getValues('categoryId');
+    const price = form.getValues('price');
+    const currentDesc = form.getValues('description');
+
+    if (!name) {
+      toast.error('Please enter a product name first to generate a description.');
+      return;
+    }
+
+    if (currentDesc && !hasGenerated) {
+      if (!confirm('This will overwrite your existing description. Do you want to proceed?')) {
+        return;
+      }
+    }
+
+    setIsGeneratingDesc(true);
+    try {
+      const categoryName = categories.find(c => c.id === categoryId)?.name;
+      const res = await generateProductDescription({ name, categoryName, price: price ? Number(price) : undefined });
+      
+      if (res.success && res.description) {
+        form.setValue('description', res.description, { shouldValidate: true, shouldDirty: true });
+        setHasGenerated(true);
+        toast.success('Description generated successfully!');
+      } else {
+        toast.error(res.error || 'Failed to generate description');
+      }
+    } catch (error) {
+      toast.error('An unexpected error occurred');
+    } finally {
+      setIsGeneratingDesc(false);
+    }
+  }
 
   async function onSubmit(data: ProductInput) {
     setIsLoading(true);
@@ -138,6 +177,42 @@ export function ProductDialog({ open, onOpenChange, productToEdit }: ProductDial
                 ))}
               </select>
               {form.formState.errors.categoryId && <p className="text-xs text-destructive mt-1 font-medium">{form.formState.errors.categoryId.message}</p>}
+            </div>
+
+            <div className="space-y-1.5 col-span-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-foreground">Description</label>
+                <Button 
+                  type="button" 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={handleGenerateDescription}
+                  disabled={isGeneratingDesc || isLoading}
+                  className="h-7 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/20 shadow-sm transition-all"
+                >
+                  {isGeneratingDesc ? (
+                    <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3 w-3 mr-1.5" />
+                  )}
+                  {hasGenerated ? 'Regenerate' : '✨ Generate Description'}
+                </Button>
+              </div>
+              <div className="relative">
+                <textarea
+                  {...form.register('description')}
+                  disabled={isLoading || isGeneratingDesc}
+                  rows={3}
+                  placeholder="Product description..."
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                />
+                {hasGenerated && (
+                  <span className="absolute bottom-2 right-2 text-[10px] font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 px-1.5 py-0.5 rounded shadow-sm">
+                    AI Generated
+                  </span>
+                )}
+              </div>
+              {form.formState.errors.description && <p className="text-xs text-destructive mt-1 font-medium">{form.formState.errors.description.message}</p>}
             </div>
 
             <div className="space-y-1.5">

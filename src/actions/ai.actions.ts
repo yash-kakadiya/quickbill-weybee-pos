@@ -170,3 +170,69 @@ export async function smartSearchProducts(query: string) {
   }
 }
 
+interface GenerateDescParams {
+  name: string;
+  categoryName?: string;
+  price?: number;
+}
+
+export async function generateProductDescription({ name, categoryName, price }: GenerateDescParams) {
+  try {
+    if (!name) {
+      return { success: false, error: 'Product name is required to generate a description.' };
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return { success: false, error: 'GEMINI_API_KEY is not configured' };
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+
+    const prompt = `
+    You are an expert retail copywriter. Write a product description for a Point of Sale (POS) system catalogue.
+    
+    Product Details:
+    - Name: ${name}
+    ${categoryName ? `- Category: ${categoryName}` : ''}
+    ${price ? `- Price: ₹${price} (use this context to determine if it's premium or low-cost, but DO NOT mention the exact price in the description)` : ''}
+    
+    Tone requirements:
+    - professional, practical, concise, retail-oriented, human-sounding
+    - descriptions should be useful for inventory catalogues, invoices, admin dashboards, and listings
+    - DO NOT use excessive marketing language, corporate buzzwords, SEO stuffing, or exaggerated claims
+    
+    Strict Output Constraints:
+    - Maximum 2-3 sentences.
+    - NO markdown formatting (no bold, italics, etc).
+    - NO bullet points.
+    - NO emojis.
+    - NO fake specifications or hallucinated technical details.
+    
+    Output ONLY the plain text description.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        temperature: 0.2, // Low temperature for practical, non-hallucinated results
+      }
+    });
+
+    let generatedText = response.text?.trim() || '';
+    
+    // Safety fallback just in case the model hallucinates markdown
+    generatedText = generatedText.replace(/[*_#`]/g, '');
+
+    if (!generatedText) {
+      return { success: false, error: 'Failed to generate description text.' };
+    }
+
+    return { success: true, description: generatedText };
+  } catch (error) {
+    console.error('generateProductDescription error:', error);
+    return { success: false, error: 'Failed to generate description due to an API error.' };
+  }
+}
+
