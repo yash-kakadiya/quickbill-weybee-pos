@@ -25,6 +25,11 @@ export default function LoginPage() {
     },
   });
 
+  function handleUseTestCredentials() {
+    form.setValue('username', 'admin', { shouldValidate: true });
+    form.setValue('password', 'admin123', { shouldValidate: true });
+  }
+
   async function onSubmit(data: LoginInput) {
     setIsLoading(true);
     try {
@@ -47,7 +52,7 @@ export default function LoginPage() {
       {/* Background decoration */}
       <div className="absolute inset-0 bg-grid-black/[0.02] dark:bg-grid-white/[0.02] -z-10" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-primary/20 rounded-full blur-[120px] -z-10 opacity-50 dark:opacity-20" />
-      
+
       <Card className="w-full max-w-sm shadow-xl border-border/50 animate-in zoom-in-95 duration-500 fade-in bg-card/80 backdrop-blur-xl">
         <CardHeader className="space-y-3 pb-6 text-center">
           <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit">
@@ -62,11 +67,11 @@ export default function LoginPage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-1.5 text-left">
               <label htmlFor="username" className="text-sm font-medium text-foreground">Username</label>
-              <Input 
-                id="username" 
-                placeholder="admin" 
-                {...form.register('username')} 
-                disabled={isLoading} 
+              <Input
+                id="username"
+                placeholder="admin"
+                {...form.register('username')}
+                disabled={isLoading}
                 className="transition-all focus-visible:ring-primary shadow-sm"
               />
               {form.formState.errors.username && (
@@ -75,12 +80,12 @@ export default function LoginPage() {
             </div>
             <div className="space-y-1.5 text-left">
               <label htmlFor="password" className="text-sm font-medium text-foreground">Password</label>
-              <Input 
-                id="password" 
-                type="password" 
-                placeholder="••••••••" 
-                {...form.register('password')} 
-                disabled={isLoading} 
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                {...form.register('password')}
+                disabled={isLoading}
                 className="transition-all focus-visible:ring-primary shadow-sm"
               />
               {form.formState.errors.password && (
@@ -98,6 +103,28 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
+          <div className="mt-6 rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Test Credentials</p>
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Username:</span> admin
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Password:</span> admin123
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleUseTestCredentials}
+                disabled={isLoading}
+              >
+                Use Credentials
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
